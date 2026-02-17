@@ -1,0 +1,1091 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="description" content="Fast-paced top-down shooter with boss fights, power-ups, and wave-based progression. Built with pure JavaScript!" />
+<meta name="author" content="Ethan" />
+<title>Topdown Action — Enhanced Edition</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="crate-styles.css">
+<link rel="stylesheet" href="battlepass-styles.css">
+</head>
+<body>
+<div id="ui">
+
+  <!-- ─── GAME HUD ─── -->
+  <div id="topbar">
+    <div id="score">Score: <span id="scoreVal">0</span></div>
+    <div id="hp">HP: <span id="hpVal">100</span></div>
+    <div id="wave">Wave: <span id="waveVal">1</span></div>
+    <div id="coinsHUD">🪙 0</div>
+    <div id="xpHUD">
+      <div id="xpLevel">Level <span id="xpLevelVal">1</span></div>
+      <div id="xpBar">
+        <div id="xpBarFill"></div>
+      </div>
+      <div id="xpText"><span id="xpCurrentVal">0</span> / <span id="xpNeededVal">100</span> XP</div>
+    </div>
+  </div>
+
+  <div id="abilities">
+    <div id="dashAbility" class="ability" title="Dash (SPACE)">
+      <div class="ability-icon">⚡</div>
+      <div class="ability-cooldown"></div>
+      <div class="ability-timer"></div>
+      <div class="ability-key">SPC</div>
+    </div>
+  </div>
+
+  <div id="buffsDisplay"></div>
+
+  <div id="combo" class="hidden"><span id="comboVal">0</span>x COMBO!</div>
+  <div id="scorePopups"></div>
+  <div id="waveAnnouncement" class="hidden">WAVE 1</div>
+
+  <!-- ─── CANVAS ─── -->
+  <canvas id="game"></canvas>
+
+  <!-- ─── HOME SCREEN ─── -->
+  <div id="homeScreen">
+    <div class="home-scanlines"></div>
+    <div class="home-glow"></div>
+    <div class="home-content">
+      <div class="home-title-wrap">
+        <h1 class="home-title">TOPDOWN</h1>
+        <h1 class="home-title accent">ACTION</h1>
+        <p class="home-sub">Survive · Upgrade · Dominate</p>
+      </div>
+      <div id="gameOverMsg" class="hidden game-over-banner">
+        ☠ GAME OVER &nbsp;·&nbsp; Score: <span id="finalScore">0</span>
+      </div>
+      <div class="home-btn-group">
+        <button id="startBtn" class="home-btn primary">▶ &nbsp;START GAME</button>
+        <button id="shopBtn"  class="home-btn secondary">🛒 &nbsp;SHOP</button>
+        <button id="leaderboardBtn" class="home-btn secondary hidden">🏆 &nbsp;LEADERBOARD</button>
+        <button id="updateLogsBtn" class="home-btn secondary">📋 &nbsp;UPDATE LOGS</button>
+        <button id="settingsBtn" class="home-btn secondary">⚙ &nbsp;SETTINGS</button>
+      </div>
+      <div id="userStatus" class="user-status hidden">
+        <div class="user-info">
+          <span class="user-icon">👤</span>
+          <span id="usernameDisplay" class="username">Guest</span>
+        </div>
+        <button id="logoutBtn" class="logout-btn">LOGOUT</button>
+        <button id="adminBtn" class="home-btn danger hidden">⚠️ ADMIN</button>
+      </div>
+      <div class="home-footer">
+        <div class="home-stat">🏆 Best: <strong id="homeHighVal">0</strong></div>
+        <div class="home-stat">🪙 Coins: <strong id="homeCoinsVal">0</strong></div>
+        <div class="home-stat home-xp">
+          <div class="home-xp-header">⭐ Level <strong id="homeXPLevel">1</strong></div>
+          <div class="home-xp-bar-container">
+            <div class="home-xp-bar" id="homeXPBar"></div>
+          </div>
+          <div class="home-xp-text"><span id="homeXPCurrent">0</span> / <span id="homeXPNeeded">100</span> XP</div>
+        </div>
+      </div>
+      <div class="home-controls">
+        <strong>Controls</strong>
+        <span>WASD / Arrows — Move</span>
+        <span>Mouse — Aim &amp; Shoot</span>
+        <span>SPACE — Dash (invincible!)</span>
+        <span>ESC — Pause</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── SETTINGS PANEL ─── -->
+  <div id="settingsPanel" class="hidden panel-overlay">
+    <div class="panel-box">
+      <h2 class="panel-title">⚙ SETTINGS</h2>
+      <div class="settings-list">
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">🔊</span>
+            <div><div class="setting-name">Master Sound</div><div class="setting-desc">All game audio on/off</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="masterSoundToggle" checked><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">🔫</span>
+            <div><div class="setting-name">Shoot Sound</div><div class="setting-desc">Player shooting sound only</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="shootSoundToggle" checked><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">📳</span>
+            <div><div class="setting-name">Screen Shake</div><div class="setting-desc">Camera shake on damage</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="screenShakeToggle" checked><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">✨</span>
+            <div><div class="setting-name">Particles</div><div class="setting-desc">Explosion effects</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="particlesToggle" checked><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">📊</span>
+            <div><div class="setting-name">Show FPS</div><div class="setting-desc">Frames-per-second counter</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="showFPSToggle"><span class="slider"></span></label>
+        </div>
+        <div class="setting-row">
+          <div class="setting-label">
+            <span class="setting-icon">🎯</span>
+            <div><div class="setting-name">Auto-Shoot</div><div class="setting-desc">Automatically fire (for trackpads)</div></div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="autoShootToggle"><span class="slider"></span></label>
+        </div>
+      </div>
+      <button class="panel-back-btn" id="settingsBackBtn">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ─── SHOP PANEL ─── -->
+  <div id="shopPanel" class="hidden panel-overlay">
+    <div class="panel-box shop-box">
+      <h2 class="panel-title">🛒 SHOP</h2>
+      <div class="shop-coins-bar">🪙 <span id="shopCoinsVal">0</span> coins available</div>
+      <p class="shop-hint">Earn coins by killing enemies and clearing waves</p>
+      
+      <!-- Shop Tabs -->
+      <div class="shop-tabs">
+        <button class="shop-tab active" data-tab="skins">
+          <span class="shop-tab-icon">🎨</span>
+          <span>SKINS</span>
+        </button>
+        <button class="shop-tab" data-tab="crates">
+          <span class="shop-tab-icon">📦</span>
+          <span>CRATES</span>
+        </button>
+        <button class="shop-tab" data-tab="battlepass">
+          <span class="shop-tab-icon">🎫</span>
+          <span>BATTLE PASS</span>
+        </button>
+        <button class="shop-tab" data-tab="cosmetics">
+          <span class="shop-tab-icon">✨</span>
+          <span>COSMETICS</span>
+        </button>
+      </div>
+      
+      <!-- Skins Tab Content -->
+      <div id="shopTab-skins" class="shop-tab-content">
+        <div id="skinGrid" class="skin-grid"></div>
+      </div>
+      
+      <!-- Crates Tab Content -->
+      <div id="shopTab-crates" class="shop-tab-content hidden">
+        <div class="crates-info">
+          <p>🎁 Each crate gives you 1 item • Duplicates convert to coins</p>
+        </div>
+        <div id="cratesGrid" class="crates-grid"></div>
+      </div>
+
+      <!-- Battle Pass Tab Content -->
+      <div id="shopTab-battlepass" class="shop-tab-content hidden">
+        <!-- Populated by initBattlePassTab() -->
+      </div>
+
+      <!-- Cosmetics Tab Content -->
+      <div id="shopTab-cosmetics" class="shop-tab-content hidden">
+        <!-- Populated by initCosmeticsTab() -->
+      </div>
+
+      <div id="crateMessage" class="crate-message hidden"></div>
+      <button class="panel-back-btn" id="shopBackBtn">← BACK</button>
+    </div>
+  </div>
+  
+  <!-- ─── CRATE INDEX MODAL ─── -->
+  <div id="crateIndexModal" class="hidden crate-modal-overlay" onclick="if(event.target===this)closeCrateIndex()">
+    <div class="crate-modal-box crate-index-box">
+      <div class="crate-index-header">
+        <h2 id="crateIndexTitle" class="crate-index-title">CRATE CONTENTS</h2>
+        <button class="crate-index-close" onclick="closeCrateIndex()">&times;</button>
+      </div>
+      <div id="crateIndexBody" class="crate-index-body"></div>
+    </div>
+  </div>
+
+  <!-- ─── CRATE OPENING MODAL ─── -->
+  <div id="crateOpenModal" class="hidden crate-modal-overlay">
+    <div class="crate-modal-box">
+      <!-- Opening Animation -->
+      <div id="crateOpenAnimation" class="crate-animation-container">
+        <div class="crate-selector-line"></div>
+        <div id="crateReel" class="crate-reel"></div>
+      </div>
+      
+      <!-- Results Display -->
+      <div id="crateResults" class="hidden crate-results-container">
+        <h2 class="crate-results-title">🎉 YOUR REWARDS</h2>
+        <div id="crateRewardsList" class="crate-rewards-list"></div>
+        <div id="crateSummary" class="crate-summary"></div>
+        <button class="crate-close-btn" onclick="closeCrateModal()">COLLECT REWARDS</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── PAUSE OVERLAY ─── -->
+  <div id="pauseOverlay" class="hidden panel-overlay">
+    <div class="panel-box pause-box">
+      <h2 class="panel-title">⏸ PAUSED</h2>
+      <div class="pause-buttons">
+        <button class="home-btn primary"    id="resumeBtn">▶ RESUME</button>
+        <button class="home-btn secondary"  id="pauseSettingsBtn">⚙ SETTINGS</button>
+        <button class="home-btn danger"     id="menuBtn">⌂ MAIN MENU</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── LOGIN/SIGNUP MODAL ─── -->
+  <div id="authModal" class="panel-overlay">
+    <div class="panel-box auth-box">
+      <h2 class="panel-title">🔐 AUTHENTICATION</h2>
+      <div id="authTabs" class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">LOGIN</button>
+        <button class="auth-tab" data-tab="signup">SIGN UP</button>
+      </div>
+      
+      <!-- Login Form -->
+      <div id="loginForm" class="auth-form">
+        <input type="email" id="loginEmail" placeholder="Email" class="auth-input">
+        <input type="password" id="loginPassword" placeholder="Password" class="auth-input">
+        <button id="loginBtn" class="home-btn primary">🔑 LOGIN</button>
+        <div id="loginError" class="auth-error hidden"></div>
+      </div>
+      
+      <!-- Signup Form -->
+      <div id="signupForm" class="auth-form hidden">
+        <input type="text" id="signupUsername" placeholder="Username (display name)" class="auth-input">
+        <input type="email" id="signupEmail" placeholder="Email" class="auth-input">
+        <input type="password" id="signupPassword" placeholder="Password (min 6 characters)" class="auth-input">
+        <button id="signupBtn" class="home-btn primary">✨ CREATE ACCOUNT</button>
+        <div id="signupError" class="auth-error hidden"></div>
+      </div>
+      
+      <button id="playGuestBtn" class="home-btn secondary">👤 PLAY AS GUEST</button>
+      <p class="auth-note">Guest mode: No save data, no leaderboard access</p>
+    </div>
+  </div>
+
+  <!-- ─── LEADERBOARD PANEL ─── -->
+  <div id="leaderboardPanel" class="hidden panel-overlay">
+    <div class="panel-box leaderboard-box">
+      <h2 class="panel-title">🏆 LEADERBOARD</h2>
+      <div class="leaderboard-filters">
+        <button class="filter-btn active" data-filter="allTime">🏆 High Scores</button>
+        <button class="filter-btn" data-filter="coins">🪙 Most Coins</button>
+        <button class="filter-btn" data-filter="level">⭐ Highest Level</button>
+      </div>
+      <div id="leaderboardList" class="leaderboard-list">
+        <div class="loading-spinner">Loading...</div>
+      </div>
+      <button class="panel-back-btn" id="leaderboardBackBtn">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ─── UPDATE LOGS PANEL ─── -->
+  <div id="updateLogsPanel" class="hidden panel-overlay">
+    <div class="panel-box updates-box">
+      <h2 class="panel-title">📋 UPDATE LOGS</h2>
+      
+      <!-- Version 3.0.0 - MASSIVE UPDATE -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v3.0.0 - MASSIVE UPDATE</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+          <span class="update-category improved">IMPROVED</span>
+          <span class="update-category fixed">BALANCE</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>🏆 EXCLUSIVE CHAMPION SKINS:</strong> Top 3 leaderboard players automatically receive divine animated skins - Gold Champion (1st), Silver Champion (2nd), Bronze Champion (3rd) - featuring multi-layered visual effects beyond even Quantum Flux!</li>
+            <li><strong>🪙 Coins Leaderboard:</strong> New separate leaderboard tracking total coins earned. Compete in BOTH score and coins!</li>
+            <li><strong>💀 Legendary Boss (0.1%):</strong> Ultra-rare Legendary Destroyer with 0.1% spawn chance after wave 3. Features 5 difficulty phases, complex attack patterns (lava eruptions, plasma arcs, prismatic coronas), and massive rewards (5,500+ points, 550+ coins, 24 power-ups)</li>
+            <li><strong>Permanent Upgrades System:</strong> Three types of permanent upgrades - Weapon, Max HP, and Speed (all 12% drop rate)</li>
+            <li><strong>Max HP Upgrade ♥:</strong> Increase maximum health by +20 HP per level (up to 160 HP total)</li>
+            <li><strong>Speed Upgrade ⟫:</strong> Boost movement speed by +15% per level (up to 45% faster)</li>
+            <li><strong>Quantum Flux Skin ⚛️:</strong> New legendary 10,000 coin skin with chromatic aberration, orbiting particles, and reality-bending glitch effects</li>
+            <li><strong>Global Leaderboard:</strong> Compete worldwide with daily, weekly, and all-time rankings</li>
+            <li><strong>Admin Panel:</strong> Full moderation tools (ban users, manage scores, view activity logs, dev console)</li>
+            <li><strong>Update Logs Panel:</strong> Track all game changes in one place</li>
+            <li><strong>Boss Balance:</strong> Wave 15+ MEGA BOSS slightly easier (reduced phase 3 bullet density), Wave 5-10 Boss slightly harder (faster movement)</li>
+            <li><strong>Cloud Saves:</strong> Progress automatically saves to Firebase for logged-in users</li>
+            <li><strong>Dev Console:</strong> In-game developer tools for admins (press ~ during gameplay)</li>
+            <li><strong>Auto Champion System:</strong> Champion skins automatically granted and revoked in real-time based on leaderboard position</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 2.1.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v2.1.0 - Enhanced Cursor</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+          <span class="update-category improved">IMPROVED</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Custom Cursor:</strong> Bright, glowing crosshair cursor for better visibility on all displays</li>
+            <li><strong>Cursor Visibility:</strong> Cursor stays visible when hovering over buttons and UI elements</li>
+            <li><strong>Update Logs:</strong> This panel to track game changes</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 2.0.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v2.0.0 - Firebase Integration</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+          <span class="update-category improved">IMPROVED</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>User Accounts:</strong> Firebase authentication with login and signup</li>
+            <li><strong>Global Leaderboard:</strong> Online leaderboard with rankings</li>
+            <li><strong>Admin Panel:</strong> Complete admin tools for user management</li>
+            <li><strong>Cloud Save:</strong> Progress saves to the cloud automatically</li>
+            <li><strong>Guest Mode:</strong> Play without signing up (local save only)</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.5.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.5.0 - Shop System</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Shop:</strong> Unlock character skins with coins</li>
+            <li><strong>Coin System:</strong> Earn coins by killing enemies and clearing waves</li>
+            <li><strong>Skins:</strong> Multiple unique character skins to collect</li>
+            <li><strong>Skin Preview:</strong> See skins before purchasing</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.4.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.4.0 - Polish Update</div>
+        </div>
+        <div>
+          <span class="update-category improved">IMPROVED</span>
+          <span class="update-category fixed">FIXED</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>UI Redesign:</strong> Modern glassmorphism UI with better visual hierarchy</li>
+            <li><strong>Settings Panel:</strong> Toggle sound, particles, screen shake, and more</li>
+            <li><strong>Active Buffs Display:</strong> Visual indicators for all active power-ups</li>
+            <li><strong>Performance:</strong> Optimized particle system and collision detection</li>
+            <li><strong>Bug Fixes:</strong> Fixed boss spawn timing and power-up drop rates</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.3.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.3.0 - Boss Battles</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Boss Fights:</strong> Epic boss battles every 5 waves</li>
+            <li><strong>Boss Patterns:</strong> Rotating bullet patterns that increase in complexity</li>
+            <li><strong>Mini-Bosses:</strong> Rare purple elite enemies with special attacks</li>
+            <li><strong>Wave Announcements:</strong> Dramatic wave transition animations</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.2.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.2.0 - Power-Ups</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Power-Up System:</strong> Health, Rapid Fire, Speed Boost, Shield, and Weapon Upgrades</li>
+            <li><strong>Drop Mechanics:</strong> 20% chance to drop from enemies</li>
+            <li><strong>Visual Effects:</strong> Glowing power-up orbs with pulsing animations</li>
+            <li><strong>Weapon Progression:</strong> Upgrade from single → double → triple shot</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.1.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.1.0 - Abilities & Combat</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Dash Ability:</strong> Invulnerable dash with 3-second cooldown</li>
+            <li><strong>Enemy Variety:</strong> Normal, Fast, Tank, and Shooter enemy types</li>
+            <li><strong>Combo System:</strong> Chain kills for bonus points (10% per level)</li>
+            <li><strong>Particle Effects:</strong> Explosions and visual feedback</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Version 1.0.0 -->
+      <div class="update-entry">
+        <div class="update-header">
+          <div class="update-version">v1.0.0 - Initial Release</div>
+        </div>
+        <div>
+          <span class="update-category new">NEW</span>
+        </div>
+        <div class="update-content">
+          <ul>
+            <li><strong>Core Gameplay:</strong> Wave-based survival shooter</li>
+            <li><strong>Player Movement:</strong> WASD controls with mouse aiming</li>
+            <li><strong>Basic Enemies:</strong> Standard red enemy spawns</li>
+            <li><strong>Shooting:</strong> Click to shoot, auto-fire when holding</li>
+            <li><strong>High Score:</strong> Local storage persistence</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="panel-back-btn" id="updateLogsBackBtn">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ─── ADMIN PANEL ─── -->
+  <div id="adminPanel" class="hidden panel-overlay">
+    <div class="panel-box admin-box">
+      <h2 class="panel-title">⚠️ ADMIN PANEL</h2>
+
+      <!-- Tab bar -->
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="ban">🚫 Bans</button>
+        <button class="admin-tab" data-tab="users">👥 Users</button>
+        <button class="admin-tab" data-tab="stats">📊 Stats</button>
+        <button class="admin-tab" data-tab="announce">📢 Announce</button>
+        <button class="admin-tab" data-tab="scores">🏆 Scores</button>
+        <button class="admin-tab" data-tab="flags">⚠️ Flags</button>
+        <button class="admin-tab" data-tab="logs">📋 Logs</button>
+        <button class="admin-tab" data-tab="devconsole">🎮 Dev</button>
+      </div>
+
+      <!-- Global message bar -->
+      <div id="adminMessage" class="admin-message hidden"></div>
+
+      <!-- ── BAN TAB ── -->
+      <div id="adminTab-ban" class="admin-tab-content">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">Ban User by ID</h3>
+          <input type="text" id="banUserId" placeholder="User ID" class="auth-input">
+          <input type="text" id="banReason" placeholder="Reason (optional)" class="auth-input">
+          <button id="banUserBtn" class="home-btn danger">🚫 BAN USER</button>
+        </div>
+        <div class="admin-section">
+          <h3 class="admin-subtitle">Banned Users</h3>
+          <div id="bannedUsersList" class="banned-list">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── USERS TAB ── -->
+      <div id="adminTab-users" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">All Registered Users</h3>
+          <input type="text" id="userSearchInput" placeholder="🔍 Search by username or email..." class="auth-input" style="margin-bottom: 12px;">
+          <div id="usersList" class="admin-scroll-list">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── STATS TAB ── -->
+      <div id="adminTab-stats" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">📊 Platform Statistics</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-value" id="totalUsers">-</div>
+              <div class="stat-label">Total Users</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="activeToday">-</div>
+              <div class="stat-label">Active Today</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="totalGames">-</div>
+              <div class="stat-label">Games Played</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-value" id="avgScore">-</div>
+              <div class="stat-label">Avg High Score</div>
+            </div>
+          </div>
+        </div>
+        <div class="admin-section">
+          <h3 class="admin-subtitle">🏆 Top Players (All Time)</h3>
+          <div id="topPlayersList" class="admin-scroll-list"></div>
+        </div>
+      </div>
+
+      <!-- ── ANNOUNCE TAB ── -->
+      <div id="adminTab-announce" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">📢 Send Global Announcement</h3>
+          
+          <!-- Title -->
+          <input type="text" id="announceTitle" placeholder="Announcement Title" class="auth-input" style="margin-bottom: 8px;" maxlength="100">
+          <div style="font-size: 10px; color: var(--muted); margin-bottom: 8px; text-align: right;">
+            <span id="titleCounter">0/100</span>
+          </div>
+          
+          <!-- Message -->
+          <textarea id="announceMessage" placeholder="Message content..." class="auth-input" rows="4" style="margin-bottom: 8px; resize: vertical;" maxlength="500"></textarea>
+          <div style="font-size: 10px; color: var(--muted); margin-bottom: 12px; text-align: right;">
+            <span id="messageCounter">0/500</span>
+          </div>
+          
+          <!-- Type and Priority -->
+          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Type</label>
+              <select id="announceType" class="auth-input">
+                <option value="info">ℹ️ Info</option>
+                <option value="warning">⚠️ Warning</option>
+                <option value="success">✅ Success</option>
+                <option value="error">❌ Error</option>
+              </select>
+            </div>
+            <div style="flex: 1;">
+              <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">Priority</label>
+              <select id="announcePriority" class="auth-input">
+                <option value="normal">Normal</option>
+                <option value="high">⚡ High Priority</option>
+                <option value="urgent">🚨 Urgent</option>
+              </select>
+            </div>
+          </div>
+          
+          <!-- Expiry Date (Optional) -->
+          <div style="margin-bottom: 12px;">
+            <label style="font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px;">
+              Auto-Expire (Optional) - Leave blank for permanent
+            </label>
+            <input type="datetime-local" id="announceExpiry" class="auth-input" style="width: 100%;">
+          </div>
+          
+          <!-- Options -->
+          <div style="margin-bottom: 12px; display: flex; gap: 12px; align-items: center;">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: pointer;">
+              <input type="checkbox" id="announceActive" checked style="cursor: pointer;">
+              <span>Active immediately</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text); cursor: pointer;">
+              <input type="checkbox" id="announceShowToGuests" checked style="cursor: pointer;">
+              <span>Show to guests</span>
+            </label>
+          </div>
+          
+          <!-- Action Buttons -->
+          <div style="display: flex; gap: 8px;">
+            <button id="previewAnnouncementBtn" class="home-btn" style="flex: 1; background: rgba(88,166,255,0.1); border: 1px solid rgba(88,166,255,0.3);">
+              👁️ PREVIEW
+            </button>
+            <button id="sendAnnouncementBtn" class="home-btn primary" style="flex: 2;">
+              📢 SEND TO ALL USERS
+            </button>
+          </div>
+        </div>
+        <div class="admin-section">
+          <h3 class="admin-subtitle">📜 Recent Announcements</h3>
+          <div id="recentAnnouncements" class="admin-scroll-list">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SCORES TAB ── -->
+      <div id="adminTab-scores" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">🏆 High Score Leaderboard</h3>
+          <div id="scoresAdminList" class="admin-scroll-list"></div>
+        </div>
+        <div class="admin-section" style="margin-top:12px">
+          <h3 class="admin-subtitle">🪙 Coins Leaderboard</h3>
+          <div id="coinsAdminList" class="admin-scroll-list"></div>
+        </div>
+        <div class="admin-section" style="margin-top:12px">
+          <h3 class="admin-subtitle">⭐ Level Leaderboard</h3>
+          <div id="levelAdminList" class="admin-scroll-list"></div>
+        </div>
+      </div>
+
+      <!-- ── FLAGS TAB ── -->
+      <div id="adminTab-flags" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">⚠️ Flagged / Suspicious Scores</h3>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.5;">
+            The anti-cheat system logs scores here when something is suspicious.
+            <strong style="color:#ffd700">REJECT</strong> = score blocked but not banned.
+            <strong style="color:#ff4757">BAN</strong> = auto-banned already.
+            <strong style="color:#ffd700">FLAG</strong> = borderline, review manually.
+          </p>
+          <div id="flaggedScoresList" class="admin-scroll-list" style="max-height: 380px;">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── LOGS TAB ── -->
+      <div id="adminTab-logs" class="admin-tab-content hidden">
+        <div class="admin-section">
+          <h3 class="admin-subtitle">Recent Activity (last 50)</h3>
+          <div id="activityLogsList" class="admin-scroll-list">
+            <div class="loading-spinner">Loading...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── DEV CONSOLE TAB ── -->
+      <div id="adminTab-devconsole" class="admin-tab-content hidden">
+        <div class="dev-console-note">
+          💡 Changes take effect immediately in-game. Press <kbd>~</kbd> during gameplay to toggle the in-game overlay.
+        </div>
+
+        <div class="dev-grid">
+          <!-- Wave -->
+          <div class="dev-card">
+            <div class="dev-card-label">🌊 Set Wave</div>
+            <div class="dev-row">
+              <input type="number" id="devWaveInput" class="dev-input" value="1" min="1" max="99">
+              <button class="dev-btn" onclick="devSetWave()">SET</button>
+            </div>
+          </div>
+
+          <!-- HP -->
+          <div class="dev-card">
+            <div class="dev-card-label">❤️ Set Player HP</div>
+            <div class="dev-row">
+              <input type="number" id="devHpInput" class="dev-input" value="100" min="1" max="9999">
+              <button class="dev-btn" onclick="devSetHp()">SET</button>
+            </div>
+          </div>
+
+          <!-- Score -->
+          <div class="dev-card">
+            <div class="dev-card-label">🏆 Set Score</div>
+            <div class="dev-row">
+              <input type="number" id="devScoreInput" class="dev-input" value="0" min="0">
+              <button class="dev-btn" onclick="devSetScore()">SET</button>
+            </div>
+          </div>
+
+          <!-- Coins -->
+          <div class="dev-card">
+            <div class="dev-card-label">🪙 Set Coins</div>
+            <div class="dev-row">
+              <input type="number" id="devCoinsInput" class="dev-input" value="100" min="0">
+              <button class="dev-btn" onclick="devSetCoins()">SET</button>
+            </div>
+          </div>
+
+          <!-- Battle Pass XP -->
+          <div class="dev-card">
+            <div class="dev-card-label">🎫 Set Battle Pass XP</div>
+            <div class="dev-row">
+              <input type="number" id="devBattlePassXPInput" class="dev-input" value="1000" min="0" max="10000">
+              <button class="dev-btn" onclick="devSetBattlePassXP()">SET</button>
+            </div>
+          </div>
+
+          <!-- Weapon Level -->
+          <div class="dev-card">
+            <div class="dev-card-label">🔫 Weapon Level</div>
+            <div class="dev-row" style="gap:6px">
+              <button class="dev-btn small" onclick="devSetWeapon(1)">LV1</button>
+              <button class="dev-btn small" onclick="devSetWeapon(2)">LV2</button>
+              <button class="dev-btn small" onclick="devSetWeapon(3)">LV3</button>
+            </div>
+          </div>
+
+          <!-- Max HP Level -->
+          <div class="dev-card">
+            <div class="dev-card-label">♥ Max HP Level</div>
+            <div class="dev-row" style="gap:6px">
+              <button class="dev-btn small" onclick="devSetMaxHp(1)">LV1</button>
+              <button class="dev-btn small" onclick="devSetMaxHp(2)">LV2</button>
+              <button class="dev-btn small" onclick="devSetMaxHp(3)">LV3</button>
+            </div>
+          </div>
+
+          <!-- Speed Level -->
+          <div class="dev-card">
+            <div class="dev-card-label">⟫ Speed Level</div>
+            <div class="dev-row" style="gap:6px">
+              <button class="dev-btn small" onclick="devSetSpeed(1)">LV1</button>
+              <button class="dev-btn small" onclick="devSetSpeed(2)">LV2</button>
+              <button class="dev-btn small" onclick="devSetSpeed(3)">LV3</button>
+            </div>
+          </div>
+
+          <!-- God Mode -->
+          <div class="dev-card">
+            <div class="dev-card-label">🛡️ God Mode</div>
+            <div class="dev-row">
+              <span id="godModeStatus" class="dev-status off">OFF</span>
+              <button class="dev-btn" onclick="devToggleGodMode()">TOGGLE</button>
+            </div>
+          </div>
+
+          <!-- Kill all enemies -->
+          <div class="dev-card">
+            <div class="dev-card-label">💥 Clear Enemies</div>
+            <div class="dev-row">
+              <button class="dev-btn danger" onclick="devKillAll()">KILL ALL</button>
+            </div>
+          </div>
+
+          <!-- Skip wave -->
+          <div class="dev-card">
+            <div class="dev-card-label">⏭️ Skip Wave</div>
+            <div class="dev-row">
+              <button class="dev-btn" onclick="devSkipWave()">SKIP</button>
+            </div>
+          </div>
+
+          <!-- Spawn Boss -->
+          <div class="dev-card">
+            <div class="dev-card-label">👾 Spawn Boss</div>
+            <div class="dev-row" style="gap:6px">
+              <button class="dev-btn small" onclick="devSpawnBoss(1)">B1</button>
+              <button class="dev-btn small" onclick="devSpawnBoss(2)">B2</button>
+              <button class="dev-btn small" onclick="devSpawnBoss(3)">B3</button>
+              <button class="dev-btn small" onclick="devSpawnBoss(4)" style="background: linear-gradient(135deg, #ff0066, #ff3399); font-weight: bold;">B4</button>
+            </div>
+          </div>
+
+          <!-- Full heal -->
+          <div class="dev-card">
+            <div class="dev-card-label">💊 Full Heal</div>
+            <div class="dev-row">
+              <button class="dev-btn success" onclick="devFullHeal()">HEAL</button>
+            </div>
+          </div>
+
+          <!-- Spawn Specific Enemies -->
+          <div class="dev-card">
+            <div class="dev-card-label">👾 Spawn Enemy</div>
+            <div class="dev-row" style="gap:4px; flex-wrap: wrap;">
+              <button class="dev-btn small" onclick="devSpawnEnemy('normal')">Normal</button>
+              <button class="dev-btn small" onclick="devSpawnEnemy('fast')">Fast</button>
+              <button class="dev-btn small" onclick="devSpawnEnemy('tank')">Tank</button>
+              <button class="dev-btn small" onclick="devSpawnEnemy('shooter')">Shooter</button>
+              <button class="dev-btn small" onclick="devSpawnEnemy('enforcer')">Enforcer</button>
+              <button class="dev-btn small" onclick="devSpawnEnemy('miniboss')">Mini</button>
+            </div>
+          </div>
+
+          <!-- Grant All Skins -->
+          <div class="dev-card">
+            <div class="dev-card-label">🎨 Unlock All Skins</div>
+            <div class="dev-row">
+              <button class="dev-btn" onclick="devUnlockAllSkins()">UNLOCK ALL</button>
+            </div>
+          </div>
+
+          <!-- Test Power-ups -->
+          <div class="dev-card">
+            <div class="dev-card-label">⭐ Spawn Power-Up</div>
+            <div class="dev-row" style="gap:4px; flex-wrap: wrap;">
+              <button class="dev-btn small" onclick="devSpawnPowerup('health')">💚 HP</button>
+              <button class="dev-btn small" onclick="devSpawnPowerup('rapidFire')">⚡ Fire</button>
+              <button class="dev-btn small" onclick="devSpawnPowerup('speedBoost')">💙 Speed</button>
+              <button class="dev-btn small" onclick="devSpawnPowerup('shield')">💜 Shield</button>
+              <button class="dev-btn small" onclick="devSpawnPowerup('weaponUpgrade')">⭐ Weap</button>
+            </div>
+          </div>
+
+          <!-- Teleport Player -->
+          <div class="dev-card">
+            <div class="dev-card-label">📍 Teleport Player</div>
+            <div class="dev-row" style="gap:4px;">
+              <input type="number" id="devTeleportX" class="dev-input" placeholder="X" value="400">
+              <input type="number" id="devTeleportY" class="dev-input" placeholder="Y" value="300">
+              <button class="dev-btn small" onclick="devTeleport()">GO</button>
+            </div>
+          </div>
+
+          <!-- Game Difficulty Multiplier -->
+          <div class="dev-card">
+            <div class="dev-card-label">⚖️ Difficulty</div>
+            <div class="dev-row">
+              <input type="number" id="devDifficulty" class="dev-input" value="1.0" step="0.1" min="0.1" max="5.0">
+              <button class="dev-btn" onclick="devSetDifficulty()">SET</button>
+            </div>
+          </div>
+
+          <!-- Reset All Upgrades -->
+          <div class="dev-card">
+            <div class="dev-card-label">🔄 Reset Upgrades</div>
+            <div class="dev-row">
+              <button class="dev-btn danger" onclick="devResetUpgrades()">RESET ALL</button>
+            </div>
+          </div>
+
+          <!-- ══════════ THE CREATOR CONTROLS ══════════ -->
+          <div class="dev-card" style="grid-column: 1 / -1; background: linear-gradient(135deg, rgba(255,215,0,0.1), rgba(157,78,221,0.1)); border: 2px solid rgba(255,215,0,0.3);">
+            <div class="dev-card-label" style="color: #ffd700; font-size: 16px; text-align: center; font-weight: 900; letter-spacing: 2px; text-shadow: 0 0 10px rgba(255,215,0,0.5);">
+              👑 THE CREATOR - SECRET SKIN CONTROLS 👑
+            </div>
+          </div>
+
+          <!-- Force Next Crate = THE CREATOR -->
+          <div class="dev-card">
+            <div class="dev-card-label">🎯 Force Next Crate</div>
+            <div class="dev-row">
+              <button class="dev-btn" style="background: linear-gradient(135deg, #ffd700, #ff69b4); font-weight: bold; box-shadow: 0 0 15px rgba(255,215,0,0.5);" onclick="devForceCreatorNext()">NEXT = CREATOR</button>
+            </div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px;">Next Icon Crate will give THE CREATOR</div>
+          </div>
+
+          <!-- Instant Unlock THE CREATOR -->
+          <div class="dev-card">
+            <div class="dev-card-label">✨ Instant Unlock</div>
+            <div class="dev-row">
+              <button class="dev-btn success" onclick="devUnlockCreator()">UNLOCK CREATOR</button>
+            </div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px;">Add THE CREATOR to collection</div>
+          </div>
+
+          <!-- Remove THE CREATOR -->
+          <div class="dev-card">
+            <div class="dev-card-label">🗑️ Remove Creator</div>
+            <div class="dev-row">
+              <button class="dev-btn danger" onclick="devRemoveCreator()">REMOVE CREATOR</button>
+            </div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px;">Remove from collection (test unlock flow)</div>
+          </div>
+
+          <!-- Check Creator Status -->
+          <div class="dev-card">
+            <div class="dev-card-label">📊 Creator Status</div>
+            <div class="dev-row">
+              <span id="creatorStatus" class="dev-status off">NOT OWNED</span>
+              <button class="dev-btn" onclick="devCheckCreatorStatus()">CHECK</button>
+            </div>
+          </div>
+
+          <!-- Equip THE CREATOR -->
+          <div class="dev-card">
+            <div class="dev-card-label">👕 Equip Creator</div>
+            <div class="dev-row">
+              <button class="dev-btn" onclick="devEquipCreator()">EQUIP NOW</button>
+            </div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.6); margin-top: 4px;">Auto-unlocks if not owned</div>
+          </div>
+
+          <!-- Test Creator Pull Odds -->
+          <div class="dev-card">
+            <div class="dev-card-label">🎲 Simulate Pulls</div>
+            <div class="dev-row">
+              <input type="number" id="devSimulatePulls" class="dev-input" value="100" min="1" max="1000" style="width: 80px;">
+              <button class="dev-btn" onclick="devSimulateCreatorPulls()">SIMULATE</button>
+            </div>
+            <div id="simulationResult" style="font-size: 11px; color: rgba(255,255,255,0.8); margin-top: 4px; min-height: 16px;"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="panel-back-btn" id="adminBackBtn">← BACK</button>
+    </div>
+  </div>
+
+  <!-- ─── IN-GAME DEV OVERLAY (admin only, toggle with ~) ─── -->
+  <div id="devOverlay" class="hidden">
+    <div class="dev-overlay-header">
+      <span>⚠️ DEV CONSOLE</span>
+      <button onclick="devOverlayClose()" class="dev-overlay-close">✕</button>
+    </div>
+    <div class="dev-overlay-grid">
+      <div class="dev-ov-group">
+        <label>🌊 Wave</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovWaveInput" class="dev-ov-input" min="1" max="99">
+          <button onclick="devSetWave(true)" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>❤️ HP</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovHpInput" class="dev-ov-input" min="1" max="9999">
+          <button onclick="devSetHp(true)" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>🏆 Score</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovScoreInput" class="dev-ov-input" min="0">
+          <button onclick="devSetScore(true)" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>🪙 Set Coins</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovCoinsInput" class="dev-ov-input" value="100" min="0">
+          <button onclick="devSetCoins(true)" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>🎫 Battle Pass XP</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovBattlePassXPInput" class="dev-ov-input" value="1000" min="0" max="10000">
+          <button onclick="devSetBattlePassXP(true)" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>🔫 Weapon</label>
+        <div class="dev-ov-row" style="gap:4px">
+          <button onclick="devSetWeapon(1)" class="dev-ov-btn sm">1</button>
+          <button onclick="devSetWeapon(2)" class="dev-ov-btn sm">2</button>
+          <button onclick="devSetWeapon(3)" class="dev-ov-btn sm">3</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>♥ Max HP</label>
+        <div class="dev-ov-row" style="gap:4px">
+          <button onclick="devSetMaxHp(1)" class="dev-ov-btn sm">1</button>
+          <button onclick="devSetMaxHp(2)" class="dev-ov-btn sm">2</button>
+          <button onclick="devSetMaxHp(3)" class="dev-ov-btn sm">3</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>⟫ Speed</label>
+        <div class="dev-ov-row" style="gap:4px">
+          <button onclick="devSetSpeed(1)" class="dev-ov-btn sm">1</button>
+          <button onclick="devSetSpeed(2)" class="dev-ov-btn sm">2</button>
+          <button onclick="devSetSpeed(3)" class="dev-ov-btn sm">3</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>🛡️ God Mode</label>
+        <div class="dev-ov-row">
+          <span id="ovGodStatus" class="dev-ov-status off">OFF</span>
+          <button onclick="devToggleGodMode()" class="dev-ov-btn">TOGGLE</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>💥 Enemies</label>
+        <button onclick="devKillAll()" class="dev-ov-btn danger full">KILL ALL</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>⏭️ Wave</label>
+        <button onclick="devSkipWave()" class="dev-ov-btn full">SKIP WAVE</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>👾 Spawn Boss</label>
+        <div class="dev-ov-row" style="gap:4px">
+          <button onclick="devSpawnBoss(1)" class="dev-ov-btn sm">B1</button>
+          <button onclick="devSpawnBoss(2)" class="dev-ov-btn sm">B2</button>
+          <button onclick="devSpawnBoss(3)" class="dev-ov-btn sm">B3</button>
+          <button onclick="devSpawnBoss(4)" class="dev-ov-btn sm" style="background: linear-gradient(135deg, #ff0066, #ff3399); font-weight: bold;">B4</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>💊 Heal</label>
+        <button onclick="devFullHeal()" class="dev-ov-btn success full">FULL HEAL</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>👾 Enemy</label>
+        <select id="ovEnemyType" class="dev-ov-input" style="font-size: 11px;">
+          <option value="normal">Normal</option>
+          <option value="fast">Fast</option>
+          <option value="tank">Tank</option>
+          <option value="shooter">Shooter</option>
+          <option value="enforcer">Enforcer</option>
+          <option value="miniboss">Mini</option>
+        </select>
+        <button onclick="devSpawnEnemyOverlay()" class="dev-ov-btn">SPAWN</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>⭐ Power-Up</label>
+        <select id="ovPowerupType" class="dev-ov-input" style="font-size: 11px;">
+          <option value="health">Health</option>
+          <option value="rapidFire">Rapid Fire</option>
+          <option value="speedBoost">Speed</option>
+          <option value="shield">Shield</option>
+          <option value="weaponUpgrade">Weapon</option>
+        </select>
+        <button onclick="devSpawnPowerupOverlay()" class="dev-ov-btn">SPAWN</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>🎨 Skins</label>
+        <button onclick="devUnlockAllSkins()" class="dev-ov-btn full">UNLOCK ALL</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>🔄 Reset</label>
+        <button onclick="devResetUpgrades()" class="dev-ov-btn danger full">RESET</button>
+      </div>
+      <div class="dev-ov-group">
+        <label>📍 Teleport X,Y</label>
+        <div class="dev-ov-row" style="gap:4px">
+          <input type="number" id="ovTeleportX" class="dev-ov-input" placeholder="X" value="400">
+          <input type="number" id="ovTeleportY" class="dev-ov-input" placeholder="Y" value="300">
+          <button onclick="devTeleportOverlay()" class="dev-ov-btn sm">GO</button>
+        </div>
+      </div>
+      <div class="dev-ov-group">
+        <label>⚖️ Difficulty</label>
+        <div class="dev-ov-row">
+          <input type="number" id="ovDifficulty" class="dev-ov-input" value="1.0" step="0.1" min="0.1" max="5.0">
+          <button onclick="devSetDifficultyOverlay()" class="dev-ov-btn">SET</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script src="anticheat.js"></script>
+<!-- Load systems that game.js depends on first -->
+<script src="crate-system.js"></script>
+<script src="battlepass-system.js"></script>
+<!-- Then game.js which defines variables needed by firebase-auth -->
+<script src="game.js"></script>
+<!-- Then firebase modules that depend on game.js variables -->
+<script src="firebase-auth.js"></script>
+<script src="firebase-ui.js"></script>
+<script src="firebase_announcements.js"></script>
+
+</body>
+</html>
